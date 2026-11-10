@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestor de tareas | Docker</title>
+  <style>
+    :root { --tinta:#1c2733; --suave:#5b6b7b; --linea:#d9e0e7; --fondo:#f3f6f9; --azul:#1d63ed; --verde:#12805c; --rojo:#b3261e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: "Segoe UI", system-ui, sans-serif; background:var(--fondo); color:var(--tinta); }
+    main { max-width: 680px; margin: 0 auto; padding: 32px 20px 60px; }
+    h1 { margin: 0 0 4px; font-size: 1.7rem; }
+    .sub { margin: 0 0 20px; color: var(--suave); }
+    .estado { display:flex; flex-wrap:wrap; gap:10px; align-items:center; background:#fff; border:1px solid var(--linea); border-radius:10px; padding:14px 16px; margin-bottom:20px; font-size:.95rem; }
+    .caja { font-family: Consolas, monospace; background:var(--fondo); border:1px solid var(--linea); border-radius:6px; padding:3px 8px; }
+    .punto { width:10px; height:10px; border-radius:50%; background:#9aa7b4; }
+    .ok .punto { background:var(--verde); } .mal .punto { background:var(--rojo); }
+    #detalle { flex-basis:100%; color:var(--suave); font-size:.85rem; }
+    form { display:flex; gap:8px; margin-bottom:16px; }
+    input[type=text] { flex:1; padding:11px 12px; border:1px solid var(--linea); border-radius:8px; font-size:1rem; }
+    button { border:0; border-radius:8px; padding:10px 16px; font-size:.95rem; cursor:pointer; background:var(--azul); color:#fff; }
+    ul { list-style:none; margin:0; padding:0; }
+    li { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--linea); border-radius:8px; padding:11px 14px; margin-bottom:8px; }
+    li span { flex:1; }
+    li.hecha span { text-decoration: line-through; color: var(--suave); }
+    li button { background:transparent; color:var(--rojo); padding:4px 8px; }
+    .vacio { color:var(--suave); text-align:center; padding:20px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Gestor de tareas</h1>
+  <p class="sub">Dos contenedores Docker comunicados entre sí: aplicación Node.js y base de datos MySQL.</p>
+
+  <div class="estado" id="estado">
+    <span class="punto"></span>
+    <span class="caja">tareas-app</span> <span>&harr;</span> <span class="caja">tareas-db</span>
+    <strong id="textoEstado">Comprobando conexión…</strong>
+    <span id="detalle"></span>
+  </div>
+
+  <form id="formulario">
+    <input type="text" id="titulo" placeholder="Escribe una tarea nueva" maxlength="150" required>
+    <button type="submit">Agregar</button>
+  </form>
+  <ul id="lista"></ul>
+</main>
+<script>
+  const lista = document.getElementById('lista');
+
+  async function comprobar() {
+    const estado = document.getElementById('estado');
+    try {
+      const r = await fetch('/api/health');
+      const d = await r.json();
+      estado.className = 'estado ' + (r.ok ? 'ok' : 'mal');
+      document.getElementById('textoEstado').textContent = r.ok ? 'Base de datos conectada' : 'Sin conexión con la base de datos';
+      document.getElementById('detalle').textContent = r.ok
+        ? 'Host: ' + d.hostDb + ' · MySQL ' + d.versionMysql + ' · Hora del servidor de BD: ' + new Date(d.horaServidorDb).toLocaleString()
+        : d.detalle;
+    } catch (e) {
+      estado.className = 'estado mal';
+      document.getElementById('textoEstado').textContent = 'La aplicación no responde';
+    }
+  }
+
+  async function cargar() {
+    const r = await fetch('/api/tareas');
+    const tareas = r.ok ? await r.json() : [];
+    lista.innerHTML = '';
+    if (!tareas.length) { lista.innerHTML = '<li class="vacio">No hay tareas todavía.</li>'; return; }
+    for (const t of tareas) {
+      const li = document.createElement('li');
+      if (t.completada) li.className = 'hecha';
+      const check = document.createElement('input');
+      check.type = 'checkbox'; check.checked = t.completada;
+      check.onchange = async () => { await fetch('/api/tareas/' + t.id + '/completar', { method: 'PUT' }); cargar(); };
+      const texto = document.createElement('span');
+      texto.textContent = '#' + t.id + '  ' + t.titulo;
+      const borrar = document.createElement('button');
+      borrar.textContent = 'Eliminar';
+      borrar.onclick = async () => { await fetch('/api/tareas/' + t.id, { method: 'DELETE' }); cargar(); };
+      li.append(check, texto, borrar);
+      lista.append(li);
+    }
+  }
+
+  document.getElementById('formulario').onsubmit = async (e) => {
+    e.preventDefault();
+    const campo = document.getElementById('titulo');
+    await fetch('/api/tareas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo: campo.value }) });
+    campo.value = '';
+    cargar();
+  };
+
+  comprobar(); cargar();
+</script>
+</body>
+</html>

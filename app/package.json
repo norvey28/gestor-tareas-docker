@@ -1,0 +1,16 @@
+{
+  "name": "gestor-tareas-docker",
+  "version": "1.0.0",
+  "description": "Gestor de tareas: aplicacion Node.js + MySQL en dos contenedores Docker comunicados entre si",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mysql2": "^3.11.5"
+  }
+}

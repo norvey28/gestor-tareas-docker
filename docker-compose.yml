@@ -1,0 +1,41 @@
+# Alternativa a los comandos manuales: levanta los dos contenedores y su red con
+#   docker compose up -d --build
+services:
+  tareas-db:
+    image: mysql:8.4
+    container_name: tareas-db
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: tareasdb
+    volumes:
+      - tareas-datos:/var/lib/mysql
+    networks:
+      - tareas-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  tareas-app:
+    build: ./app
+    container_name: tareas-app
+    environment:
+      DB_HOST: tareas-db
+      DB_USER: root
+      DB_PASSWORD: "123456"
+      DB_NAME: tareasdb
+    ports:
+      - "3000:3000"
+    depends_on:
+      tareas-db:
+        condition: service_healthy
+    networks:
+      - tareas-net
+
+networks:
+  tareas-net:
+    name: tareas-net
+
+volumes:
+  tareas-datos:
