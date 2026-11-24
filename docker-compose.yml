@@ -18,7 +18,9 @@ services:
       retries: 20
 
   tareas-app:
-    build: ./app
+    build:
+      context: ./app
+      target: produccion
     container_name: tareas-app
     environment:
       DB_HOST: tareas-db

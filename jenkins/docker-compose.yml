@@ -1,0 +1,22 @@
+# Servidor Jenkins para el proyecto.
+#   docker compose -f jenkins/docker-compose.yml up -d --build
+# Interfaz web: http://localhost:8080
+services:
+  jenkins:
+    build: .
+    image: jenkins-docker:lts
+    container_name: jenkins
+    # Se ejecuta como root para poder usar el socket de Docker del equipo.
+    # Solo para el entorno de laboratorio: da a Jenkins control total de Docker.
+    user: root
+    restart: unless-stopped
+    ports:
+      - "8080:8080"     # interfaz web
+      - "50000:50000"   # conexion de agentes
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_home:
+    name: jenkins_home
